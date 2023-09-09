@@ -1,25 +1,47 @@
-// Listen for the extension button click event
-chrome.browserAction.onClicked.addListener(function(tab) {
-  // Send a message to the content script to request the current page's HTML
-  chrome.scripting.executeScript({
-    target: { tabId: tab.id },
-    function: scrapeHTML
+chrome.action.onClicked.addListener((tab) => {
+  chrome.tabs.sendMessage(tab.id, 'parse');
+});
+
+chrome.action.onClicked.addListener((tab) => {
+  chrome.identity.getAuthToken({}, (token) => {
+    if (!chrome.runtime.lastError && token) {
+      // console.log('User already authenticated:', token);
+      chrome.tabs.sendMessage(tab.id, 'authed');
+      // authenticate();
+    } else {
+      chrome.tabs.sendMessage(tab.id, 'not authed');
+      authenticate();
+    }
   });
 });
 
-function scrapeHTML() {
-  const courseDict = {};
 
-  const courseAttributes = document.querySelectorAll('.result__link');
+// Function to handle OAuth2.0 authentication
+function authenticate() {
+  chrome.identity.getAuthToken({ interactive: true }, async (token) => {
+    if (chrome.runtime.lastError) {
+      console.error(chrome.runtime.lastError);
+      return;
+    }
 
-  courseAttributes.forEach(course => {
-    const courseTitle = course.getAttribute('data-group').substring(5);
-    const courseSection = course.getElementsByClassName('result__flex--3')[0].textContent.substring(16);
-    const maybeCourseTimes = course.getElementsByClassName('flex--grow');
-    const courseTime = Array.from(maybeCourseTimes)[maybeCourseTimes.length - 1].textContent.substring(7);
-    courseDict[courseTitle + ' ' + courseSection] = courseTime;
+    // Use the obtained access token for API requests
+    const calendarAPI = 'https://www.googleapis.com/calendar/v3';
+
+    // Example: Fetch the user's calendar list
+    const calendarListResponse = await fetch(`${calendarAPI}/users/me/calendarList`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (calendarListResponse.status === 200) {
+      const calendarListData = await calendarListResponse.json();
+      // console.log("User's Calendar List:", calendarListData);
+      chrome.tabs.sendMessage(calendarListData, 'data');
+    } else {
+      console.error('Failed to fetch calendar list:', calendarListResponse.statusText);
+    }
   });
-
-  // Send the scraped data back to the background script
-  chrome.runtime.sendMessage({ action: 'scrapedData', data: courseDict });
 }
+

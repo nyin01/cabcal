@@ -1,8 +1,12 @@
 {
   "manifest_version": 3,
-  "name": "HTML Parser Extension",
+  "name": "Cab to Cal",
   "version": "1.0",
   "description": "A Chrome extension to parse HTML and perform simple tasks",
+
+ "background": {
+    "service_worker": "background.js"
+  },
 
   "action": {
     "default_icon": {
@@ -12,13 +16,19 @@
     }
   },
 
-  "background": {
-    "service_worker": "background.js" 
+  "oauth2": {
+    "client_id": "1081092609679-hls5lio8p3vq873vth28r6aqo1ldb616.apps.googleusercontent.com",
+    "scopes": ["https://www.googleapis.com/auth/calendar"]
   },
 
   "permissions": [
     "activeTab", 
-    "storage"
+    "storage",
+    "identity"
+  ],
+
+  "host_permissions":[
+    "https://www.googleapis.com/"
   ],
 
   "icons": {
@@ -26,8 +36,6 @@
     "48": "images/icon.png",
     "128": "images/icon.png"
   },
-
-
 
   "content_scripts": [
     {
